@@ -128,3 +128,6 @@ OrangePi-BuildLinux/linux-trusty/
 update.sh
 download.sh
 vmlinux
+
+arch/arm/mach-sunxi/power/brom/mksunxichecksum
+*.map
