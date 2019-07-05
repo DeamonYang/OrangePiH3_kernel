@@ -4,7 +4,7 @@
  *
  * $Copyright Open Broadcom Corporation$
  *
- * $Id: siutils.c 481602 2014-05-29 22:43:34Z $
+ * $Id: siutils.c 497460 2014-08-19 15:14:13Z $
  */
 
 #include <bcm_cfg.h>
@@ -68,6 +68,7 @@ static bool si_pmu_is_ilp_sensitive(uint32 idx, uint regoff);
 static void si_config_gcigpio(si_t *sih, uint32 gci_pos, uint8 gcigpio,
 	uint8 gpioctl_mask, uint8 gpioctl_val);
 #endif /* BCMLTECOEX */
+
 
 
 /* global variable to indicate reservation/release of gpio's */
@@ -221,6 +222,34 @@ si_buscore_prep(si_info_t *sii, uint bustype, uint devid, void *sdh)
 	return TRUE;
 }
 
+uint32
+si_get_pmu_reg_addr(si_t *sih, uint32 offset)
+{
+	si_info_t *sii = SI_INFO(sih);
+	uint32 pmuaddr = INVALID_ADDR;
+	uint origidx = 0;
+
+	SI_MSG(("%s: pmu access, offset: %x\n", __FUNCTION__, offset));
+	if (!(sii->pub.cccaps & CC_CAP_PMU)) {
+		goto done;
+	}
+	if (AOB_ENAB(&sii->pub)) {
+		uint pmucoreidx;
+		pmuregs_t *pmu;
+		SI_MSG(("%s: AOBENAB: %x\n", __FUNCTION__, offset));
+		origidx = sii->curidx;
+		pmucoreidx = si_findcoreidx(&sii->pub, PMU_CORE_ID, 0);
+		pmu = si_setcoreidx(&sii->pub, pmucoreidx);
+		pmuaddr = (uint32)(uintptr)((volatile uint8*)pmu + offset);
+		si_setcoreidx(sih, origidx);
+	} else
+		pmuaddr = SI_ENUM_BASE + offset;
+
+done:
+	SI_MSG(("%s: pmuaddr: %x\n", __FUNCTION__, pmuaddr));
+	return pmuaddr;
+}
+
 static bool
 si_buscore_setup(si_info_t *sii, chipcregs_t *cc, uint bustype, uint32 savewin,
 	uint *origidx, void *regs)
@@ -291,7 +320,8 @@ si_buscore_setup(si_info_t *sii, chipcregs_t *cc, uint bustype, uint32 savewin,
 			/* for SDIO but downloaded on PCIE dev */
 			if (cid == PCIE2_CORE_ID) {
 				if ((CHIPID(sii->pub.chip) == BCM43602_CHIP_ID) ||
-					((CHIPID(sii->pub.chip) == BCM4345_CHIP_ID) &&
+					((CHIPID(sii->pub.chip) == BCM4345_CHIP_ID ||
+					CHIPID(sii->pub.chip) == BCM43454_CHIP_ID) &&
 					CST4345_CHIPMODE_PCIE(sii->pub.chipst))) {
 					pcieidx = i;
 					pcierev = crev;
@@ -465,11 +495,13 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 	}
 
 	sih->bustype = bustype;
+#ifdef BCMBUSTYPE
 	if (bustype != BUSTYPE(bustype)) {
 		SI_ERROR(("si_doattach: bus type %d does not match configured bus type %d\n",
 			bustype, BUSTYPE(bustype)));
 		return NULL;
 	}
+#endif
 
 	/* bus/core/clk setup for register access */
 	if (!si_buscore_prep(sii, bustype, devid, sdh)) {
@@ -486,6 +518,18 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 		SI_ERROR(("%s: chipcommon register space is null \n", __FUNCTION__));
 		return NULL;
 	}
+#ifdef COSTOMER_HW4
+#ifdef CONFIG_MACH_UNIVERSAL5433
+	/* old revision check */
+	if (!check_rev()) {
+		/* abnormal link status */
+		if (!check_pcie_link_status()) {
+			printk("%s : PCIE LINK is abnormal status\n", __FUNCTION__);
+			return NULL;
+		}
+	}
+#endif /* CONFIG_MACH_UNIVERSAL5433 */
+#endif 
 	w = R_REG(osh, &cc->chipid);
 	if ((w & 0xfffff) == 148277) w -= 65532;
 	sih->socitype = (w & CID_TYPE_MASK) >> CID_TYPE_SHIFT;
@@ -494,7 +538,7 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 	sih->chiprev = (w & CID_REV_MASK) >> CID_REV_SHIFT;
 	sih->chippkg = (w & CID_PKG_MASK) >> CID_PKG_SHIFT;
 
-#if defined(HW_OOB)
+#if defined(HW_OOB) || defined(FORCE_WOWLAN)
 	dhd_conf_set_hw_oob_intr(sdh, sih->chip);
 #endif
 
@@ -1374,6 +1418,9 @@ si_chip_hostif(si_t *sih)
 
 	switch (CHIPID(sih->chip)) {
 
+	case BCM43012_CHIP_ID:
+		hosti = CHIP_HOSTIF_SDIOMODE;
+		break;
 	case BCM43602_CHIP_ID:
 		hosti = CHIP_HOSTIF_PCIEMODE;
 		break;
@@ -1400,6 +1447,7 @@ si_chip_hostif(si_t *sih)
 		break;
 
 	case BCM4345_CHIP_ID:
+	case BCM43454_CHIP_ID:
 		if (CST4345_CHIPMODE_USB20D(sih->chipst) || CST4345_CHIPMODE_HSIC(sih->chipst))
 			hosti = CHIP_HOSTIF_USBMODE;
 		else if (CST4345_CHIPMODE_SDIOD(sih->chipst))
@@ -1476,6 +1524,14 @@ si_watchdog(si_t *sih, uint ticks)
 			ticks = 2;
 		else if (ticks > maxt)
 			ticks = maxt;
+		if (CHIPID(sih->chip) == BCM43012_CHIP_ID) {
+			PMU_REG_NEW(sih, min_res_mask, ~0, DEFAULT_43012_MIN_RES_MASK);
+			PMU_REG_NEW(sih, watchdog_res_mask, ~0, DEFAULT_43012_MIN_RES_MASK);
+			PMU_REG_NEW(sih, pmustatus, PST_WDRESET, PST_WDRESET);
+			PMU_REG_NEW(sih, pmucontrol_ext, PCTL_EXT_FASTLPO_SWENAB, 0);
+			SPINWAIT((PMU_REG(sih, pmustatus, 0, 0) & PST_ILPFASTLPO),
+				PMU_MAX_TRANSITION_DLY);
+		}
 
 		pmu_corereg(sih, SI_CC_IDX, pmuwatchdog, ~0, ticks);
 	} else {
@@ -2305,7 +2361,13 @@ si_socram_size(si_t *sih)
 			memsize += (1 << ((lss - 1) + SR_BSZ_BASE));
 	} else {
 		uint8 i;
-		uint nb = (coreinfo & SRCI_SRNB_MASK) >> SRCI_SRNB_SHIFT;
+		uint nb;
+		/* length of SRAM Banks increased for corerev greater than 23 */
+		if (corerev >= 23) {
+			nb = (coreinfo & (SRCI_SRNB_MASK | SRCI_SRNB_MASK_EXT)) >> SRCI_SRNB_SHIFT;
+		} else {
+			nb = (coreinfo & SRCI_SRNB_MASK) >> SRCI_SRNB_SHIFT;
+		}
 		for (i = 0; i < nb; i++)
 			memsize += socram_banksize(sii, regs, i, SOCRAM_MEMTYPE_RAM);
 	}
@@ -2804,6 +2866,7 @@ si_is_sprom_available(si_t *sih)
 			!(sih->chipst & CST4324_SFLASH_MASK));
 	case BCM4335_CHIP_ID:
 	case BCM4345_CHIP_ID:
+	case BCM43454_CHIP_ID:
 		return ((sih->chipst & CST4335_SPROM_MASK) &&
 			!(sih->chipst & CST4335_SFLASH_MASK));
 	case BCM4349_CHIP_GRPID:
@@ -2828,6 +2891,8 @@ si_is_sprom_available(si_t *sih)
 	case BCM43228_CHIP_ID:
 	case BCM43428_CHIP_ID:
 		return (sih->chipst & CST43228_OTP_PRESENT) != CST43228_OTP_PRESENT;
+	case BCM43012_CHIP_ID:
+		return FALSE;
 	default:
 		return TRUE;
 	}

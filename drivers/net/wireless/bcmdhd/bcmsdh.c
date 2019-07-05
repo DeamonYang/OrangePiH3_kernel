@@ -36,7 +36,7 @@ bcmsdh_info_t * l_bcmsdh = NULL;
 extern SDIOH_API_RC sdioh_detach(osl_t *osh, sdioh_info_t *sd);
 #endif
 
-#if defined(OOB_INTR_ONLY) && defined(HW_OOB)
+#if defined(OOB_INTR_ONLY) && defined(HW_OOB) || defined(FORCE_WOWLAN)
 extern int
 sdioh_enable_hw_oob_intr(void *sdioh, bool enable);
 
@@ -378,7 +378,7 @@ bcmsdh_reg_read(void *sdh, uint32 addr, uint size)
 	SDIOH_API_RC status;
 	uint32 word = 0;
 
-	BCMSDH_INFO(("%s:fun = 1, addr = 0x%x, ", __FUNCTION__, addr));
+	BCMSDH_INFO(("%s:fun = 1, addr = 0x%x\n", __FUNCTION__, addr));
 
 	if (!bcmsdh)
 		bcmsdh = l_bcmsdh;
@@ -695,4 +695,11 @@ bcmsdh_gpioout(void *sdh, uint32 gpio, bool enab)
 	sdioh_info_t *sd = (sdioh_info_t *)(p->sdioh);
 
 	return sdioh_gpioout(sd, gpio, enab);
+}
+
+uint
+bcmsdh_set_mode(void *sdh, uint mode) 
+{
+	bcmsdh_info_t *bcmsdh = (bcmsdh_info_t *)sdh;
+	return (sdioh_set_mode(bcmsdh->sdioh, mode));
 }

@@ -353,12 +353,14 @@ _dhd_pno_add_ssid(dhd_pub_t *dhd, wlc_ssid_t* ssids_list, int nssid)
 exit:
 	return err;
 }
+
 /* qsort compare function */
 static int
 _dhd_pno_cmpfunc(const void *a, const void *b)
 {
 	return (*(uint16*)a - *(uint16*)b);
 }
+
 static int
 _dhd_pno_chan_merge(uint16 *d_chan_list, int *nchan,
 	uint16 *chan_list1, int nchan1, uint16 *chan_list2, int nchan2)
@@ -394,6 +396,7 @@ _dhd_pno_chan_merge(uint16 *d_chan_list, int *nchan,
 	*nchan = k;
 	return err;
 }
+
 static int
 _dhd_pno_get_channels(dhd_pub_t *dhd, uint16 *d_chan_list,
 	int *nchan, uint8 band, bool skip_dfs)
@@ -433,6 +436,7 @@ _dhd_pno_get_channels(dhd_pub_t *dhd, uint16 *d_chan_list,
 exit:
 	return err;
 }
+
 static int
 _dhd_pno_convert_format(dhd_pub_t *dhd, struct dhd_pno_batch_params *params_batch,
 	char *buf, int nbufsize)
@@ -561,6 +565,7 @@ exit:
 	bytes_written = (int32)(bp - buf);
 	return bytes_written;
 }
+
 static int
 _dhd_pno_clear_all_batch_results(dhd_pub_t *dhd, struct list_head *head, bool only_last)
 {
@@ -632,6 +637,7 @@ _dhd_pno_cfg(dhd_pub_t *dhd, uint16 *channel_list, int nchan)
 exit:
 	return err;
 }
+
 static int
 _dhd_pno_reinitialize_prof(dhd_pub_t *dhd, dhd_pno_params_t *params, dhd_pno_mode_t mode)
 {
@@ -710,6 +716,7 @@ _dhd_pno_reinitialize_prof(dhd_pub_t *dhd, dhd_pno_params_t *params, dhd_pno_mod
 	mutex_unlock(&_pno_state->pno_mutex);
 	return err;
 }
+
 static int
 _dhd_pno_add_bssid(dhd_pub_t *dhd, wl_pfn_bssid_t *p_pfn_bssid, int nbssid)
 {
@@ -727,6 +734,7 @@ _dhd_pno_add_bssid(dhd_pub_t *dhd, wl_pfn_bssid_t *p_pfn_bssid, int nbssid)
 exit:
 	return err;
 }
+
 int
 dhd_pno_stop_for_ssid(dhd_pub_t *dhd)
 {
@@ -953,6 +961,7 @@ exit:
 		_pno_state->pno_mode &= ~DHD_PNO_LEGACY_MODE;
 	return err;
 }
+
 int
 dhd_pno_set_for_batch(dhd_pub_t *dhd, struct dhd_pno_batch_params *batch_params)
 {
@@ -1133,7 +1142,7 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 	NULL_CHECK(dhd->pno_state, "pno_state is NULL", err);
 	if (!dhd_support_sta_mode(dhd)) {
 		err = BCME_BADOPTION;
-		goto exit;
+		goto exit_no_unlock;
 	}
 	DHD_PNO(("%s enter\n", __FUNCTION__));
 	_pno_state = PNO_GET_PNOSTATE(dhd);
@@ -1141,11 +1150,11 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 	if (!WLS_SUPPORTED(_pno_state)) {
 		DHD_ERROR(("%s : wifi location service is not supported\n", __FUNCTION__));
 		err = BCME_UNSUPPORTED;
-		goto exit;
+		goto exit_no_unlock;
 	}
 	if (!(_pno_state->pno_mode & DHD_PNO_BATCH_MODE)) {
 		DHD_ERROR(("%s: Batching SCAN mode is not enabled\n", __FUNCTION__));
-		goto exit;
+		goto exit_no_unlock;
 	}
 	mutex_lock(&_pno_state->pno_mutex);
 	_params = &_pno_state->pno_params_arr[INDEX_OF_BATCH_PARAMS];
@@ -1354,10 +1363,12 @@ exit:
 		_params->params_batch.get_batch.bytes_written = err;
 	}
 	mutex_unlock(&_pno_state->pno_mutex);
+exit_no_unlock:
 	if (waitqueue_active(&_pno_state->get_batch_done.wait))
 		complete(&_pno_state->get_batch_done);
 	return err;
 }
+
 static void
 _dhd_pno_get_batch_handler(struct work_struct *work)
 {
@@ -1845,6 +1856,7 @@ int dhd_pno_init(dhd_pub_t *dhd)
 exit:
 	return err;
 }
+
 int dhd_pno_deinit(dhd_pub_t *dhd)
 {
 	int err = BCME_OK;
