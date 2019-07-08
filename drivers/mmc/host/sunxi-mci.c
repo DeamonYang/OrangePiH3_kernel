@@ -4010,6 +4010,7 @@ static int sunxi_mci_get_devinfo(void)
 				mmcinfo->cd = val.gpio;
 			}
 		}
+		mmcinfo->cd.gpio = 6;
 		/* get buswidth information */
 		type = script_get_item(mmc_para, "sdc_buswidth", &val);
 		if (type != SCIRPT_ITEM_VALUE_TYPE_INT) {
