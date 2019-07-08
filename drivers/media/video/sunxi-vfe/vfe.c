@@ -2779,7 +2779,7 @@ static int vidioc_enum_input(struct file *file, void *priv,
 		return -EINVAL;
 	}
 	if (0 == dev->device_valid_flag[inp->index]) {
-		vfe_err("input index(%d) > dev->dev_qty(%d)-1 invalid!, device_valid_flag[%d] = %d\n", inp->index, dev->dev_qty,inp->index, dev->device_valid_flag[inp->index]);
+		//vfe_err("input index(%d) > dev->dev_qty(%d)-1 invalid!, device_valid_flag[%d] = %d\n", inp->index, dev->dev_qty,inp->index, dev->device_valid_flag[inp->index]);
 		return -EINVAL;
 	}
 	inp->type = V4L2_INPUT_TYPE_CAMERA;
@@ -4014,14 +4014,14 @@ static unsigned int vfe_poll(struct file *file, struct poll_table_struct *wait)
 void vfe_clk_open(struct vfe_dev *dev)
 {
 	//hardware
-	vfe_print("..........................vfe clk open!.......................\n");
+	//vfe_print("..........................vfe clk open!.......................\n");
 	vfe_dphy_clk_set(dev,DPHY_CLK);
 	vfe_clk_enable(dev);
 	vfe_reset_disable(dev);
 }
 void vfe_clk_close(struct vfe_dev *dev)
 {
-	vfe_print("..........................vfe clk close!.......................\n");
+//	vfe_print("..........................vfe clk close!.......................\n");
 	vfe_clk_disable(dev);
 	if(vfe_opened_num < 2)
 	{
@@ -4033,7 +4033,7 @@ static int vfe_open(struct file *file)
 	struct vfe_dev *dev = video_drvdata(file);
 	int ret;//,input_num;
 
-	vfe_print("vfe_open\n");
+	//vfe_print("vfe_open\n");
 	if (vfe_is_opened(dev)) {
 		vfe_err("device open busy\n");
 		ret = -EBUSY;
@@ -4072,7 +4072,7 @@ static int vfe_open(struct file *file)
 	}
 	else
 	{
-		vfe_print("vfe_open ok\n");
+		//vfe_print("vfe_open ok\n");
 		vfe_opened_num ++;
 	}
 	return ret;
@@ -4083,7 +4083,7 @@ static int vfe_close(struct file *file)
 	struct vfe_dev *dev = video_drvdata(file);
 	int ret;
 
-	vfe_print("vfe_close\n");
+	//vfe_print("vfe_close\n");
 	//device
 	vfe_stop_generating(dev);
 	if(dev->vfe_s_input_flag == 1)
@@ -4108,7 +4108,8 @@ static int vfe_close(struct file *file)
 	}
 	else
 	{
-		vfe_print("vfe select input flag = %d, s_input have not be used .\n", dev->vfe_s_input_flag);
+		//vfe_print("vfe select input flag = %d, s_input have not be used .\n", dev->vfe_s_input_flag);
+		;
 	}
 	//hardware
 	bsp_csi_int_disable(dev->vip_sel, dev->cur_ch,CSI_INT_ALL);
@@ -4140,7 +4141,7 @@ static int vfe_close(struct file *file)
 	vfe_stop_opened(dev);
 	dev->ctrl_para.prev_exp_line = 0;
 	dev->ctrl_para.prev_ana_gain = 1;
-	vfe_print("vfe_close end\n");
+	//vfe_print("vfe_close end\n");
 	up(&dev->standby_seq_sema);
 	vfe_exit_isp_log(dev);
 	vfe_opened_num--;
