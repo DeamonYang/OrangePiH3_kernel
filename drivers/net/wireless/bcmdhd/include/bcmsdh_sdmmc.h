@@ -2,13 +2,13 @@
  * BCMSDH Function Driver for the native SDIO/MMC driver in the Linux Kernel
  *
  * Copyright (C) 1999-2014, Broadcom Corporation
- * 
+ *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- * 
+ *
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,7 +16,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- * 
+ *
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -60,6 +60,14 @@
 #define CLIENT_INTR			0x100	/* Get rid of this! */
 #define SDIOH_SDMMC_MAX_SG_ENTRIES	(SDPCM_MAXGLOM_SIZE+2)
 
+#if defined(SWTXGLOM)
+typedef struct glom_buf {
+	void *glom_pkt_head;
+	void *glom_pkt_tail;
+	uint32 count;				/* Total number of pkts queued */
+} glom_buf_t;
+#endif /* SWTXGLOM */
+
 struct sdioh_info {
 	osl_t		*osh;			/* osh handler */
 	void		*bcmsdh;		/* upper layer handle */
@@ -85,6 +93,9 @@ struct sdioh_info {
 	struct sdio_func	*func[SDIOD_MAX_IOFUNCS];
 
 	uint	txglom_mode;		/* Txglom mode: 0 - copy, 1 - multi-descriptor */
+#if defined(SWTXGLOM)
+	glom_buf_t glom_info;		/* pkt information used for glomming */
+#endif
 };
 
 /************************************************************

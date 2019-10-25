@@ -1,11 +1,11 @@
 config MALI
-        tristate "ARM Mali GPU modules"
-        depends on ARM
+	tristate "ARM Mali GPU modules"
+	depends on ARM
         select UMP
         select MALI400
-        default n
-        help
-          This enables the generation of mali.ko and ump.ko.
+	default n
+	help
+	  This enables the generation of mali.ko and ump.ko.
 
-source "drivers/gpu/mali/devicedrv/mali/Kconfig"
-source "drivers/gpu/mali/devicedrv/ump/Kconfig"
+source "drivers/gpu/mali/mali/Kconfig"
+source "drivers/gpu/mali/ump/Kconfig"

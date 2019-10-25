@@ -311,7 +311,7 @@ EXPORT_SYMBOL(cpu_down);
 #endif /*CONFIG_HOTPLUG_CPU*/
 
 /* Requires cpu_add_remove_lock to be held */
-static int _cpu_up(unsigned int cpu, int tasks_frozen)
+static int __cpuinit _cpu_up(unsigned int cpu, int tasks_frozen)
 {
 	int ret, nr_calls = 0;
 	void *hcpu = (void *)(long)cpu;
@@ -346,7 +346,7 @@ out_notify:
 	return ret;
 }
 
-int cpu_up(unsigned int cpu)
+int __cpuinit cpu_up(unsigned int cpu)
 {
 	int err = 0;
 
@@ -491,7 +491,7 @@ out:
 	cpu_maps_update_done();
 }
 
-static int  alloc_frozen_cpus(void)
+static int __init alloc_frozen_cpus(void)
 {
 	if (!alloc_cpumask_var(&frozen_cpus, GFP_KERNEL|__GFP_ZERO))
 		return -ENOMEM;
@@ -534,7 +534,7 @@ cpu_hotplug_pm_callback(struct notifier_block *nb,
 }
 
 
-static int cpu_hotplug_pm_sync_init(void)
+static int __init cpu_hotplug_pm_sync_init(void)
 {
 	pm_notifier(cpu_hotplug_pm_callback, 0);
 	return 0;
@@ -551,7 +551,7 @@ core_initcall(cpu_hotplug_pm_sync_init);
  * It must be called by the arch code on the new cpu, before the new cpu
  * enables interrupts and before the "boot" cpu returns from __cpu_up().
  */
-void notify_cpu_starting(unsigned int cpu)
+void __cpuinit notify_cpu_starting(unsigned int cpu)
 {
 	unsigned long val = CPU_STARTING;
 

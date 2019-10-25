@@ -79,7 +79,7 @@ void __init smp_set_ops(struct smp_operations *ops)
                smp_ops = *ops;
 };
 
-int __cpu_up(unsigned int cpu)
+int __cpuinit __cpu_up(unsigned int cpu)
 {
 	struct cpuinfo_arm *ci = &per_cpu(cpu_data, cpu);
 	struct task_struct *idle = ci->idle;
@@ -149,25 +149,25 @@ int __cpu_up(unsigned int cpu)
 }
 
 /* platform specific SMP operations */
-void smp_init_cpus(void)
+void __init smp_init_cpus(void)
 {
 	if (smp_ops.smp_init_cpus)
 		smp_ops.smp_init_cpus();
 }
 
-static void platform_smp_prepare_cpus(unsigned int max_cpus)
+static void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 {
 	if (smp_ops.smp_prepare_cpus)
 		smp_ops.smp_prepare_cpus(max_cpus);
 }
 
-static void platform_secondary_init(unsigned int cpu)
+static void __cpuinit platform_secondary_init(unsigned int cpu)
 {
 	if (smp_ops.smp_secondary_init)
 		smp_ops.smp_secondary_init(cpu);
 }
 
-int boot_secondary(unsigned int cpu, struct task_struct *idle)
+int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	if (smp_ops.smp_boot_secondary)
 		return smp_ops.smp_boot_secondary(cpu, idle);
@@ -205,7 +205,7 @@ static int platform_cpu_disable(unsigned int cpu)
 /*
  * __cpu_disable runs on the processor to be shutdown.
  */
-int __cpu_disable(void)
+int __cpuinit __cpu_disable(void)
 {
 	unsigned int cpu = smp_processor_id();
 	struct task_struct *p;
@@ -249,7 +249,7 @@ static DECLARE_COMPLETION(cpu_died);
  * called on the thread which is asking for a CPU to be shutdown -
  * waits until shutdown has completed, or it is timed out.
  */
-void __cpu_die(unsigned int cpu)
+void __cpuinit __cpu_die(unsigned int cpu)
 {
 	if (!wait_for_completion_timeout(&cpu_died, msecs_to_jiffies(5000))) {
 		pr_err("CPU%u: cpu didn't die\n", cpu);
@@ -304,7 +304,7 @@ void __ref cpu_die(void)
  * Called by both boot and secondaries to move global data into
  * per-processor storage.
  */
-static void smp_store_cpu_info(unsigned int cpuid)
+static void __cpuinit smp_store_cpu_info(unsigned int cpuid)
 {
 	struct cpuinfo_arm *cpu_info = &per_cpu(cpu_data, cpuid);
 
@@ -317,7 +317,7 @@ static void smp_store_cpu_info(unsigned int cpuid)
  * This is the secondary CPU boot entry.  We're using this CPUs
  * idle thread stack, but a set of temporary page tables.
  */
-asmlinkage void secondary_start_kernel(void)
+asmlinkage void __cpuinit secondary_start_kernel(void)
 {
 	struct mm_struct *mm = &init_mm;
 	unsigned int cpu;
@@ -373,7 +373,7 @@ asmlinkage void secondary_start_kernel(void)
 	cpu_idle();
 }
 
-void smp_cpus_done(unsigned int max_cpus)
+void __init smp_cpus_done(unsigned int max_cpus)
 {
 	int cpu;
 	unsigned long bogosum = 0;
@@ -388,14 +388,14 @@ void smp_cpus_done(unsigned int max_cpus)
 	       (bogosum / (5000/HZ)) % 100);
 }
 
-void smp_prepare_boot_cpu(void)
+void __init smp_prepare_boot_cpu(void)
 {
 	unsigned int cpu = smp_processor_id();
 
 	per_cpu(cpu_data, cpu).idle = current;
 }
 
-void smp_prepare_cpus(unsigned int max_cpus)
+void __init smp_prepare_cpus(unsigned int max_cpus)
 {
 	unsigned int ncores = num_possible_cpus();
 
@@ -427,7 +427,7 @@ void smp_prepare_cpus(unsigned int max_cpus)
 
 static void (*smp_cross_call)(const struct cpumask *, unsigned int);
 
-void set_smp_cross_call(void (*fn)(const struct cpumask *, unsigned int))
+void __init set_smp_cross_call(void (*fn)(const struct cpumask *, unsigned int))
 {
 	smp_cross_call = fn;
 }
@@ -499,7 +499,7 @@ static void broadcast_timer_set_mode(enum clock_event_mode mode,
 {
 }
 
-void broadcast_timer_setup(struct clock_event_device *evt)
+void __cpuinit broadcast_timer_setup(struct clock_event_device *evt)
 {
 	evt->name	= "dummy_timer";
 	evt->features	= CLOCK_EVT_FEAT_ONESHOT |

@@ -87,14 +87,6 @@ enum dhd_bus_state {
 #define DHD_IF_ROLE_STA(role)	(role == WLC_E_IF_ROLE_STA ||\
 				role == WLC_E_IF_ROLE_P2P_CLIENT)
 
-/* Download Types */
-typedef enum download_type {
-	FW,
-	NVRAM,
-	CLM_BLOB,
-	CLMINFO
-} download_type_t;
-
 /* For supporting multiple interfaces */
 #define DHD_MAX_IFS	16
 #define DHD_DEL_IF	-0xE
@@ -134,14 +126,6 @@ enum dhd_op_flags {
 #ifndef POWERUP_WAIT_MS
 #define POWERUP_WAIT_MS		2000 /* ms: time out in waiting wifi to come up */
 #endif
-#define MAX_CLMINFO_BUF_SIZE    (4 * 1024) /* max clminfo buf size */
-#define MAX_CLM_BUF_SIZE	(48 * 1024) /* max clm blob size */
-
-#ifndef CONFIG_BCMDHD_CLM_PATH
-#define CONFIG_BCMDHD_CLM_PATH "/system/etc/wifi/bcmdhd_clm.blob"
-#endif /* CONFIG_BCMDHD_CLM_PATH */
-#define WL_CCODE_NULL_COUNTRY  "#n"
-#define CLM_VER_STR_LEN 128
 
 enum dhd_bus_wake_state {
 	WAKE_LOCK_OFF,
@@ -175,7 +159,11 @@ enum dhd_prealloc_index {
 
 /* Packet alignment for most efficient SDIO (can change based on platform) */
 #ifndef DHD_SDALIGN
+#ifdef CUSTOM_SDIO_F2_BLKSIZE
+#define DHD_SDALIGN	CUSTOM_SDIO_F2_BLKSIZE
+#else
 #define DHD_SDALIGN	32
+#endif
 #endif
 
 /* host reordering packts logic */
@@ -320,7 +308,7 @@ typedef struct dhd_pub {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25)) && 1
 	struct mutex 	wl_start_stop_lock; /* lock/unlock for Android start/stop */
 	struct mutex 	wl_softap_lock;		 /* lock/unlock for any SoftAP/STA settings */
-#endif 
+#endif
 
 #ifdef WLBTAMP
 	uint16	maxdatablks;
@@ -433,7 +421,6 @@ typedef struct dhd_pub {
 #if defined(WLTDLS) && defined(PCIE_FULL_DONGLE)
 	tdls_peer_tbl_t peer_tbl;
 #endif /* defined(WLTDLS) && defined(PCIE_FULL_DONGLE) */
-	char		*clm_path;		/* module_param: path to clm vars file */
 	char		*conf_path;		/* module_param: path to config vars file */
 	struct dhd_conf *conf;	/* Bus module handle */
 } dhd_pub_t;
@@ -470,7 +457,7 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(dhd_workitem_context_t, dhd_get_dhd_workitem_
 	#else
 		#define DHD_PM_RESUME_RETURN_ERROR(a)	do { \
 			if (dhd_mmc_suspend) return a; } while (0)
-	#endif 
+	#endif
 	#define DHD_PM_RESUME_RETURN		do { if (dhd_mmc_suspend) return; } while (0)
 
 	#define DHD_SPINWAIT_SLEEP_INIT(a) DECLARE_WAIT_QUEUE_HEAD(a);
@@ -656,7 +643,6 @@ extern unsigned int dhd_os_get_ioctl_resp_timeout(void);
 extern void dhd_os_set_ioctl_resp_timeout(unsigned int timeout_msec);
 
 extern int dhd_os_get_image_block(char * buf, int len, void * image);
-extern int dhd_os_get_image_size(void * image);
 extern void * dhd_os_open_image(char * filename);
 extern void dhd_os_close_image(void * image);
 extern void dhd_os_wd_timer(void *bus, uint wdtick);
@@ -720,7 +706,6 @@ extern int dhd_os_enable_packet_filter(dhd_pub_t *dhdp, int val);
 extern void dhd_enable_packet_filter(int value, dhd_pub_t *dhd);
 extern int net_os_enable_packet_filter(struct net_device *dev, int val);
 extern int net_os_rxfilter_add_remove(struct net_device *dev, int val, int num);
-extern int net_os_set_suspend_bcn_li_dtim(struct net_device *dev, int val);
 #if defined(CUSTOM_PLATFORM_NV_TEGRA)
 extern void dhd_set_packet_filter_mode(struct net_device *dev, char *command);
 extern int dhd_set_packet_filter_ports(struct net_device *dev, char *command);
@@ -842,6 +827,26 @@ extern int wl_iw_send_priv_event(struct net_device *dev, char *flag);
 /* Watchdog timer interval */
 extern uint dhd_watchdog_ms;
 extern bool dhd_os_wd_timer_enabled(void *bus);
+
+#ifdef PKT_STATICS
+typedef struct pkt_statics {
+	uint16	event_count;
+	uint32	event_size;
+	uint16	ctrl_count;
+	uint32	ctrl_size;
+	uint32	data_count;
+	uint32	data_size;
+	uint16	glom_1_count;
+	uint16	glom_3_count;
+	uint16	glom_3_8_count;
+	uint16	glom_8_count;
+	uint16	glom_max;
+	uint16	glom_count;
+	uint32	glom_size;
+	uint16	test_count;
+	uint32	test_size;
+} pkt_statics_t;
+#endif
 
 #if defined(DHD_DEBUG)
 /* Console output poll interval */
@@ -1049,8 +1054,7 @@ int dhd_ndo_remove_ip(dhd_pub_t *dhd, int idx);
 /* ioctl processing for nl80211 */
 int dhd_ioctl_process(dhd_pub_t *pub, int ifidx, struct dhd_ioctl *ioc, void *data_buf);
 
-void dhd_bus_update_fw_nv_path(struct dhd_bus *bus, char *pfw_path, char *pnv_path,
-											char *pclm_path, char *pconf_path);
+void dhd_bus_update_fw_nv_path(struct dhd_bus *bus, char *pfw_path, char *pnv_path, char *pconf_path);
 void dhd_set_bus_state(void *bus, uint32 state);
 
 /* Remove proper pkts(either one no-frag pkt or whole fragmented pkts) */
@@ -1104,9 +1108,6 @@ extern void dhd_os_general_spin_unlock(dhd_pub_t *pub, unsigned long flags);
 #define DHD_FLOWID_UNLOCK(lock, flags)     dhd_os_spin_unlock((lock), (flags))
 
 
-int dhd_download_clm_blob(dhd_pub_t *dhd, unsigned char *image, uint32 len);
-
-int dhd_apply_default_clm(dhd_pub_t *dhd, char *clm_path);
 
 typedef struct wl_io_pport {
 	dhd_pub_t *dhd_pub;

@@ -33,7 +33,6 @@
 #include <linux/module.h>       /* kernel module definitions */
 #include <linux/init.h>
 #include <linux/interrupt.h>
-#include <linux/proc_fs.h>
 #include <linux/platform_device.h>
 #include <linux/serial_core.h>
 

@@ -26,8 +26,9 @@ obj-$(CONFIG_RTL8180)		+= rtl818x/
 obj-$(CONFIG_RTL8187)		+= rtl818x/
 obj-$(CONFIG_RTLWIFI)		+= rtlwifi/
 obj-$(CONFIG_RTL8188EU) 	+= rtl8188eu/
-obj-$(CONFIG_RTL8189ES) 	+= rtl8189ES_linux/
-obj-m 	+= rtl8189fs/
+obj-$(CONFIG_RTL8189ES) 	+= rtl8189es/
+obj-$(CONFIG_RTL8189FS) 	+= rtl8189fs/
+obj-$(CONFIG_RTL8192CU) 	+= rtl8192cu/
 obj-$(CONFIG_RTL8723BS) 	+= rtl8723bs/
 obj-$(CONFIG_RTL8723BS_VQ0) += rtl8703as/
 
@@ -65,9 +66,6 @@ obj-$(CONFIG_IWM)	+= iwmc3200wifi/
 obj-$(CONFIG_MWIFIEX)	+= mwifiex/
 
 obj-$(CONFIG_BCMDHD)	+= bcmdhd/
-
+obj-$(CONFIG_XRADIO) += xradio/
 obj-$(CONFIG_BRCMFMAC)	+= brcm80211/
 obj-$(CONFIG_BRCMSMAC)	+= brcm80211/
-obj-m	+= 8192cu/
-
-#obj-$(CONFIG_MT7601U) += mt7601u/

@@ -7,8 +7,7 @@ hostprogs-y	:= mksunxichecksum
 
 #use "-Os" flags.
 #Don't use "-O2" flags.
-HOSTCFLAGS:=-Wno-unused-result
-KBUILD_CFLAGS := -g -c -nostdlib -march=armv7-a -marm -Wno-unused-result -fno-unwind-tables -Wno-unused-result -fno-asynchronous-unwind-tables -mlittle-endian -O2
+KBUILD_CFLAGS := -g -c -nostdlib -march=armv7-a -marm -fno-unwind-tables -fno-asynchronous-unwind-tables -mlittle-endian -O2
 
 #Include the cur dir.
 KBUILD_CPPFLAGS += -I.
@@ -26,7 +25,7 @@ resumes-y :=   resumes.o        \
 resumes-y := $(addprefix $(obj)/,$(resumes-y))
 
 $(obj)/resumes.code: $(obj)/resumes.bin $(obj)/mksunxichecksum
-	@$(obj)/mksunxichecksum $(obj)/resumes.bin $(obj)/resumes.code
+	$(obj)/mksunxichecksum $(obj)/resumes.bin $(obj)/resumes.code
 
 $(obj)/resumes.bin: $(obj)/resumes.elf FORCE
 	$(Q)$(CROSS_COMPILE)objcopy -O binary $(obj)/resumes.elf $(obj)/resumes.bin

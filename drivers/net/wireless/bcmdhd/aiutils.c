@@ -316,7 +316,7 @@ ai_scan(si_t *sih, void *regs, uint devid)
 		sii->numcores++;
 	}
 
-	SI_ERROR(("Reached end of erom without finding END\n"));
+	SI_ERROR(("Reached end of erom without finding END"));
 
 error:
 	sii->numcores = 0;
@@ -1094,4 +1094,4 @@ ai_dumpregs(si_t *sih, struct bcmstrbuf *b)
 			    R_REG(osh, &ai->itcr));
 	}
 }
-#endif	
+#endif

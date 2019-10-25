@@ -66,6 +66,6 @@ extern unsigned int  sunxi_get_board_vendor_id(void);
 
 /* sunxi platform init functions */
 void __init sunxi_soc_ver_init(void);
-void sunxi_chip_id_init(void);
+void __init sunxi_chip_id_init(void);
 
 #endif  /* __SUNXI_MACH_SUNXI_CHIP_H */

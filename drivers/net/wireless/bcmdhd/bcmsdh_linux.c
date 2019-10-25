@@ -314,17 +314,18 @@ int bcmsdh_oob_intr_register(bcmsdh_info_t *bcmsdh, bcmsdh_cb_fn_t oob_irq_handl
 	int err = 0;
 	bcmsdh_os_info_t *bcmsdh_osinfo = bcmsdh->os_cxt;
 
+	SDLX_MSG(("%s: Enter\n", __FUNCTION__));
 	if (bcmsdh_osinfo->oob_irq_registered) {
 		SDLX_MSG(("%s: irq is already registered\n", __FUNCTION__));
 		return -EBUSY;
 	}
 #ifdef HW_OOB
-	printf("%s: HW_OOB irq=%d flags=0x%X\n", __FUNCTION__,
-		(int)bcmsdh_osinfo->oob_irq_num, (int)bcmsdh_osinfo->oob_irq_flags);
+	printf("%s: HW_OOB enabled\n", __FUNCTION__);
 #else
-	printf("%s: SW_OOB irq=%d flags=0x%X\n", __FUNCTION__,
-		(int)bcmsdh_osinfo->oob_irq_num, (int)bcmsdh_osinfo->oob_irq_flags);
+	printf("%s: SW_OOB enabled\n", __FUNCTION__);
 #endif
+	SDLX_MSG(("%s OOB irq=%d flags=%X\n", __FUNCTION__,
+		(int)bcmsdh_osinfo->oob_irq_num, (int)bcmsdh_osinfo->oob_irq_flags));
 	bcmsdh_osinfo->oob_irq_handler = oob_irq_handler;
 	bcmsdh_osinfo->oob_irq_handler_context = oob_irq_handler_context;
 	bcmsdh_osinfo->oob_irq_enabled = TRUE;
@@ -333,13 +334,12 @@ int bcmsdh_oob_intr_register(bcmsdh_info_t *bcmsdh, bcmsdh_cb_fn_t oob_irq_handl
 	err = odin_gpio_sms_request_irq(bcmsdh_osinfo->oob_irq_num, wlan_oob_irq,
 		bcmsdh_osinfo->oob_irq_flags, "bcmsdh_sdmmc", bcmsdh);
 #else
-	err = devm_request_irq(bcmsdh_osinfo->dev, bcmsdh_osinfo->oob_irq_num, wlan_oob_irq,
+	err = request_irq(bcmsdh_osinfo->oob_irq_num, wlan_oob_irq,
 		bcmsdh_osinfo->oob_irq_flags, "bcmsdh_sdmmc", bcmsdh);
 #endif /* defined(CONFIG_ARCH_ODIN) */
 	if (err) {
 		bcmsdh_osinfo->oob_irq_enabled = FALSE;
 		bcmsdh_osinfo->oob_irq_registered = FALSE;
-		bcmsdh_osinfo->oob_irq_wake_enabled = FALSE;
 		SDLX_MSG(("%s: request_irq failed with %d\n", __FUNCTION__, err));
 		return err;
 	}
@@ -348,6 +348,7 @@ int bcmsdh_oob_intr_register(bcmsdh_info_t *bcmsdh, bcmsdh_cb_fn_t oob_irq_handl
 	SDLX_MSG(("%s: disable_irq_wake\n", __FUNCTION__));
 	bcmsdh_osinfo->oob_irq_wake_enabled = FALSE;
 #else
+	SDLX_MSG(("%s: enable_irq_wake\n", __FUNCTION__));
 	err = enable_irq_wake(bcmsdh_osinfo->oob_irq_num);
 	if (err)
 		SDLX_MSG(("%s: enable_irq_wake failed with %d\n", __FUNCTION__, err));
@@ -377,7 +378,7 @@ void bcmsdh_oob_intr_unregister(bcmsdh_info_t *bcmsdh)
 		disable_irq(bcmsdh_osinfo->oob_irq_num);
 		bcmsdh_osinfo->oob_irq_enabled = FALSE;
 	}
-	devm_free_irq(bcmsdh_osinfo->dev, bcmsdh_osinfo->oob_irq_num, bcmsdh);
+	free_irq(bcmsdh_osinfo->oob_irq_num, bcmsdh);
 	bcmsdh_osinfo->oob_irq_registered = FALSE;
 }
 #endif

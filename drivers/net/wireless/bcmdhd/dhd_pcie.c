@@ -515,9 +515,7 @@ dhdpcie_dongle_attach(dhd_bus_t *bus)
 			bus->dongle_ram_base = CR4_43602_RAM_BASE;
 			break;
 		case BCM4349_CHIP_GRPID:
-			/* RAM base changed from 4349c0(revid=9) onwards */
-			bus->dongle_ram_base = ((bus->sih->chiprev < 9) ?
-			CR4_4349_RAM_BASE : CR4_4349_RAM_BASE_FROM_REV_9);
+			bus->dongle_ram_base = CR4_4349_RAM_BASE;
 			break;
 		default:
 			bus->dongle_ram_base = 0;
@@ -615,7 +613,7 @@ dhdpcie_bus_remove_prep(dhd_bus_t *bus)
 
 	bus->dhd->busstate = DHD_BUS_DOWN;
 	dhdpcie_bus_intr_disable(bus);
-	// terence 20150406: fix for null pointer handle when doing remove driver
+	// terence 20150406: fix for null pointer handle
 	if (bus->sih)
 		pcie_watchdog_reset(bus->osh, bus->sih, (sbpcieregs_t *)(bus->regs));
 
@@ -832,49 +830,17 @@ bool dhd_bus_watchdog(dhd_pub_t *dhd)
 /* Download firmware image and nvram image */
 int
 dhd_bus_download_firmware(struct dhd_bus *bus, osl_t *osh,
-                          char *pfw_path, char *pnv_path,
-                          char *pclm_path, char *pconf_path)
+                          char *pfw_path, char *pnv_path, char *pconf_path)
 {
 	int ret;
 
 	bus->fw_path = pfw_path;
 	bus->nv_path = pnv_path;
-	bus->dhd->clm_path = pclm_path;
 	bus->dhd->conf_path = pconf_path;
 
 	ret = dhdpcie_download_firmware(bus, osh);
 
 	return ret;
-}
-
-void
-dhd_set_path_params(struct dhd_bus *bus)
-{
-	/* External conf takes precedence if specified */
-	dhd_conf_preinit(bus->dhd);
-
-	if (bus->dhd->clm_path[0] == '\0') {
-		dhd_conf_set_path(bus->dhd, "clm.blob", bus->dhd->clm_path, bus->fw_path);
-	}
-	dhd_conf_set_clm_name_by_chip(bus->dhd, bus->dhd->clm_path);
-	if (bus->dhd->conf_path[0] == '\0') {
-		dhd_conf_set_path(bus->dhd, "config.txt", bus->dhd->conf_path, bus->nv_path);
-	}
-#ifdef CONFIG_PATH_AUTO_SELECT
-	dhd_conf_set_conf_name_by_chip(bus->dhd, bus->dhd->conf_path);
-#endif
-
-	dhd_conf_read_config(bus->dhd, bus->dhd->conf_path);
-
-	dhd_conf_set_fw_name_by_chip(bus->dhd, bus->fw_path);
-	dhd_conf_set_nv_name_by_chip(bus->dhd, bus->nv_path);
-	dhd_conf_set_clm_name_by_chip(bus->dhd, bus->dhd->clm_path);
-
-	printf("Final fw_path=%s\n", bus->fw_path);
-	printf("Final nv_path=%s\n", bus->nv_path);
-	printf("Final clm_path=%s\n", bus->dhd->clm_path);
-	printf("Final conf_path=%s\n", bus->dhd->conf_path);
-
 }
 
 static int
@@ -887,7 +853,15 @@ dhdpcie_download_firmware(struct dhd_bus *bus, osl_t *osh)
 
 	DHD_OS_WAKE_LOCK(bus->dhd);
 
-	dhd_set_path_params(bus);
+	/* External conf takes precedence if specified */
+	dhd_conf_preinit(bus->dhd);
+	dhd_conf_read_config(bus->dhd, bus->dhd->conf_path);
+	dhd_conf_set_fw_name_by_chip(bus->dhd, bus->fw_path);
+	dhd_conf_set_nv_name_by_chip(bus->dhd, bus->nv_path);
+
+	printf("Final fw_path=%s\n", bus->fw_path);
+	printf("Final nv_path=%s\n", bus->nv_path);
+	printf("Final conf_path=%s\n", bus->dhd->conf_path);
 
 	ret = _dhdpcie_download_firmware(bus);
 
@@ -2651,7 +2625,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 						__FUNCTION__, bcmerror));
 					goto done;
 				}
-#endif  /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_MSM */
 			}
 
 			bus->dhd->dongle_reset = TRUE;
@@ -3217,7 +3191,6 @@ dhdpcie_bus_suspend(struct dhd_bus *bus, bool state)
 	bool pending;
 	int rc = 0;
 
-	printf("%s: state=%d\n", __FUNCTION__, state);
 	if (bus->dhd == NULL) {
 		DHD_ERROR(("%s: bus not inited\n", __FUNCTION__));
 		return BCME_ERROR;

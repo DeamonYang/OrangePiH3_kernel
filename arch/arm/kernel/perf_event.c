@@ -710,8 +710,8 @@ static int probe_current_pmu(struct arm_pmu *pmu)
 
     return ret;
 }
-static void cpu_pmu_init(struct arm_pmu *armpmu);
-static int armpmu_device_probe(struct platform_device *pdev)
+static void __init cpu_pmu_init(struct arm_pmu *armpmu);
+static int __devinit armpmu_device_probe(struct platform_device *pdev)
 {
     struct arm_pmu *pmu;
     int cpu;
@@ -758,7 +758,7 @@ static struct platform_driver armpmu_driver = {
  * UNKNOWN at reset, the PMU must be explicitly reset to avoid reading
  * junk values out of them.
  */
-static int pmu_cpu_notify(struct notifier_block *b,
+static int __cpuinit pmu_cpu_notify(struct notifier_block *b,
 					unsigned long action, void *hcpu)
 {
     struct arm_pmu *pmu = per_cpu(cpu_pmu, (long)hcpu);
@@ -824,7 +824,7 @@ static struct pmu_hw_events *armpmu_get_cpu_events(void)
 	return &__get_cpu_var(cpu_hw_events);
 }
 
-static void cpu_pmu_init(struct arm_pmu *armpmu)
+static void __init cpu_pmu_init(struct arm_pmu *armpmu)
 {
 	int cpu;
 	for_each_cpu_mask(cpu, armpmu->valid_cpus) {

@@ -858,7 +858,7 @@ static struct snd_soc_dai_driver sunxi_daudio_dai[] = {
 };
 
 //static struct pinctrl *daudio_pinctrl;
-static int sunxi_daudio0_dev_probe(struct platform_device *pdev)
+static int __init sunxi_daudio0_dev_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	int reg_val = 0;
@@ -1052,7 +1052,7 @@ static int sunxi_daudio0_dev_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_daudio0_dev_remove(struct platform_device *pdev)
+static int __exit sunxi_daudio0_dev_remove(struct platform_device *pdev)
 {
 	if (daudio_used) {
 		daudio_used = 0;

@@ -603,12 +603,12 @@ static struct snd_soc_platform_driver sunxi_soc_platform = {
 	.pcm_free	= sunxi_pcm_free_dma_buffers,
 };
 
-static int sunxi_daudio_pcm_probe(struct platform_device *pdev)
+static int __init sunxi_daudio_pcm_probe(struct platform_device *pdev)
 {
 	return snd_soc_register_platform(&pdev->dev, &sunxi_soc_platform);
 }
 
-static int sunxi_daudio_pcm_remove(struct platform_device *pdev)
+static int __exit sunxi_daudio_pcm_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_platform(&pdev->dev);
 	return 0;
@@ -629,7 +629,7 @@ static struct platform_driver sunxi_daudio_pcm_driver = {
 	},
 };
 
-static int sunxi_soc_platform_daudio_init(void)
+static int __init sunxi_soc_platform_daudio_init(void)
 {
 	int err = 0;	
 	if((err = platform_device_register(&sunxi_daudio_pcm_device)) < 0)
@@ -641,7 +641,7 @@ static int sunxi_soc_platform_daudio_init(void)
 }
 module_init(sunxi_soc_platform_daudio_init);
 
-static void sunxi_soc_platform_daudio_exit(void)
+static void __exit sunxi_soc_platform_daudio_exit(void)
 {
 	return platform_driver_unregister(&sunxi_daudio_pcm_driver);
 }

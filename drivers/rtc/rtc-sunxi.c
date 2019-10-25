@@ -477,7 +477,7 @@ static int __exit sunxi_rtc_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_rtc_probe(struct platform_device *pdev)
+static int __init sunxi_rtc_probe(struct platform_device *pdev)
 {
 	struct rtc_device *rtc;
 	int ret;

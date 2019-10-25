@@ -118,7 +118,7 @@ static irqreturn_t dhdpcie_isr(int irq, void *arg);
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25))
 DEFINE_MUTEX(_dhd_sdio_mutex_lock_);
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25)) */
-#endif 
+#endif
 
 static int dhdpcie_pci_suspend(struct pci_dev *dev, pm_message_t state);
 static int dhdpcie_set_suspend_resume(struct pci_dev *dev, bool state);
@@ -310,9 +310,6 @@ dhdpcie_bus_unregister(void)
 int __devinit
 dhdpcie_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
-#ifdef BUS_POWER_RESTORE
-	wifi_adapter_info_t *adapter = NULL;
-#endif
 
 	if (dhdpcie_chipmatch (pdev->vendor, pdev->device)) {
 		DHD_ERROR(("%s: chipmatch failed!!\n", __FUNCTION__));
@@ -331,14 +328,6 @@ dhdpcie_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	/* disable async suspend */
 	device_disable_async_suspend(&pdev->dev);
 #endif /* BCMPCIE_DISABLE_ASYNC_SUSPEND */
-
-#ifdef BUS_POWER_RESTORE
-	adapter = dhd_wifi_platform_get_adapter(PCI_BUS, pdev->bus->number,
-						PCI_SLOT(pdev->devfn));
-
-	if (adapter != NULL)
-		adapter->pci_dev = pdev;
-#endif
 
 	DHD_TRACE(("%s: PCIe Enumeration done!!\n", __FUNCTION__));
 	return 0;
@@ -381,7 +370,7 @@ dhdpcie_pci_remove(struct pci_dev *pdev)
 	}
 	mutex_lock(&_dhd_sdio_mutex_lock_);
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25)) */
-#endif 
+#endif
 
 	pch = pci_get_drvdata(pdev);
 	bus = pch->bus;
@@ -436,15 +425,13 @@ dhdpcie_request_irq(dhdpcie_info_t *dhdpcie_info)
 {
 	dhd_bus_t *bus = dhdpcie_info->bus;
 	struct pci_dev *pdev = dhdpcie_info->bus->dev;
-	int err = 0;
 
 	snprintf(dhdpcie_info->pciname, sizeof(dhdpcie_info->pciname),
 	    "dhdpcie:%s", pci_name(pdev));
-	err = request_irq(pdev->irq, dhdpcie_isr, IRQF_SHARED,
-	                dhdpcie_info->pciname, bus);
-	if (err) {
-		DHD_ERROR(("%s: request_irq failed with %d\n", __FUNCTION__, err));
-		return err;
+	if (request_irq(pdev->irq, dhdpcie_isr, IRQF_SHARED,
+	                dhdpcie_info->pciname, bus) < 0) {
+			DHD_ERROR(("%s: request_irq() failed\n", __FUNCTION__));
+			return -1;
 	}
 	bus->irq_registered = TRUE;
 
@@ -685,7 +672,7 @@ int dhdpcie_init(struct pci_dev *pdev)
 	}
 	mutex_lock(&_dhd_sdio_mutex_lock_);
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25)) */
-#endif 
+#endif
 
 	do {
 		/* osl attach */
@@ -817,7 +804,7 @@ int dhdpcie_init(struct pci_dev *pdev)
 		mutex_unlock(&_dhd_sdio_mutex_lock_);
 		DHD_ERROR(("%s : the lock is released.\n", __FUNCTION__));
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) */
-#endif 
+#endif
 
 		DHD_TRACE(("%s:Exit - SUCCESS \n", __FUNCTION__));
 		return 0;  /* return  SUCCESS  */
@@ -845,7 +832,7 @@ int dhdpcie_init(struct pci_dev *pdev)
 	mutex_unlock(&_dhd_sdio_mutex_lock_);
 	DHD_ERROR(("%s : the lock is released.\n", __FUNCTION__));
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) */
-#endif 
+#endif
 
 	DHD_TRACE(("%s:Exit - FAILURE \n", __FUNCTION__));
 
@@ -1034,7 +1021,12 @@ dhdpcie_enable_device(dhd_bus_t *bus)
 		ret = pci_enable_device(bus->dev);
 		if (!ret)
 			pci_set_master(bus->dev);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0))
 	}
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0) and
+		* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0)) && \
+		* (LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0)
+		*/
 
 	if (ret)
 		pci_disable_device(bus->dev);

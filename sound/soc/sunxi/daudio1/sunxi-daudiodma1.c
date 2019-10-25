@@ -337,7 +337,7 @@ static struct platform_driver sunxi_daudio_pcm_driver = {
 	},
 };
 
-static int sunxi_soc_platform_daudio_init(void)
+static int __init sunxi_soc_platform_daudio_init(void)
 {
 	int err = 0;	
 	if((err = platform_device_register(&sunxi_daudio_pcm_device)) < 0)
@@ -349,7 +349,7 @@ static int sunxi_soc_platform_daudio_init(void)
 }
 module_init(sunxi_soc_platform_daudio_init);
 
-static void sunxi_soc_platform_daudio_exit(void)
+static void __exit sunxi_soc_platform_daudio_exit(void)
 {
 	return platform_driver_unregister(&sunxi_daudio_pcm_driver);
 }

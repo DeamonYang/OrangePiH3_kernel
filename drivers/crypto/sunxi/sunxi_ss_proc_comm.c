@@ -12,7 +12,6 @@
 
 #include <linux/spinlock.h>
 #include <linux/platform_device.h>
-#include <linux/highmem.h>
 #include <crypto/internal/hash.h>
 #include <crypto/internal/rng.h>
 

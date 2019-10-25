@@ -735,7 +735,7 @@ prpkt(const char *msg, osl_t *osh, void *p0)
 	for (p = p0; p; p = PKTNEXT(osh, p))
 		prhex(NULL, PKTDATA(osh, p), PKTLEN(osh, p));
 }
-#endif	
+#endif
 
 /* Takes an Ethernet frame and sets out-of-bound PKTPRIO.
  * Also updates the inplace vlan tag if requested.
@@ -1543,7 +1543,7 @@ bcm_format_flags(const bcm_bit_desc_t *bd, uint32 flags, char* buf, int len)
 
 	return (int)(p - buf);
 }
-#endif 
+#endif
 
 /* print bytes formatted as hex to a string. return the resulting string length */
 int
@@ -1989,7 +1989,7 @@ bcm_format_ssid(char* buf, const uchar ssid[], uint ssid_len)
 
 	return (int)(p - buf);
 }
-#endif 
+#endif
 
 #endif /* BCMDRIVER */
 
@@ -2008,7 +2008,6 @@ process_nvram_vars(char *varbuf, unsigned int len)
 	int column;
 	unsigned int buf_len, n;
 	unsigned int pad = 0;
-	char nv_ver[128];
 
 	dp = varbuf;
 
@@ -2017,13 +2016,13 @@ process_nvram_vars(char *varbuf, unsigned int len)
 
 	// terence 20130914: print out NVRAM version
 	if (varbuf[0] == '#') {
-		memset(nv_ver, 0x00, sizeof(nv_ver));
-		for (n=1; n<len && n<(sizeof(nv_ver)-1); n++) {
+		printf("NVRAM version: ");
+		for (n=1; n<len; n++) {
 			if (varbuf[n] == '\n')
 				break;
-			nv_ver[n-1] = varbuf[n];
+			printk("%c", varbuf[n]);
 		}
-		printk("NVRAM version: %s\n", nv_ver);
+		printk("\n");
 	}
 
 	for (n = 0; n < len; n++) {
@@ -2270,7 +2269,7 @@ bcm_ip_cksum(uint8 *buf, uint32 len, uint32 sum)
 #define BCM_MWBMAP_AUDIT(mwb)   do {} while (0)
 #define MWBMAP_ASSERT(exp)		do {} while (0)
 #define MWBMAP_DBG(x)
-#endif  /* !BCM_MWBMAP_DEBUG */
+#endif /* !BCM_MWBMAP_DEBUG */
 
 
 typedef struct bcm_mwbmap {     /* Hierarchical multiword bitmap allocator    */

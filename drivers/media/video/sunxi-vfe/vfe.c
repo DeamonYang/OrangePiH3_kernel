@@ -915,9 +915,10 @@ static void update_isp_setting(struct vfe_dev *dev)
 		dev->isp_gen_set_pt->module_cfg.linear_table= dev->isp_tbl_addr[dev->input].isp_linear_tbl_vaddr;
 		dev->isp_gen_set_pt->module_cfg.disc_table = dev->isp_tbl_addr[dev->input].isp_disc_tbl_vaddr;
 		bsp_isp_update_lut_lens_gamma_table(&dev->isp_tbl_addr[dev->input]);
+
+		dev->isp_gen_set_pt->module_cfg.drc_table = dev->isp_tbl_addr[dev->input].isp_drc_tbl_vaddr;
+		bsp_isp_update_drc_table(&dev->isp_tbl_addr[dev->input]);
 	}
-	dev->isp_gen_set_pt->module_cfg.drc_table = dev->isp_tbl_addr[dev->input].isp_drc_tbl_vaddr;
-	bsp_isp_update_drc_table(&dev->isp_tbl_addr[dev->input]);
 }
 
 static int get_mbus_config(struct vfe_dev *dev, struct v4l2_mbus_config *mbus_config)
@@ -2047,10 +2048,12 @@ static enum v4l2_mbus_pixelcode *try_fmt_internal(struct vfe_dev *dev,struct v4l
 
   f->fmt.pix.width = ccm_fmt.width;
   f->fmt.pix.height = ccm_fmt.height;
+  f->fmt.pix.sizeimage = ccm_fmt.height * f->fmt.pix.bytesperline;
 
   vfe_dbg(0,"bus pixel code = %x at %s\n",*bus_pix_code,__func__);
   vfe_dbg(0,"pix->width = %d at %s\n",f->fmt.pix.width,__func__);
   vfe_dbg(0,"pix->height = %d at %s\n",f->fmt.pix.height,__func__);
+  vfe_dbg(0,"pix->sizeimage = %d at %s\n",f->fmt.pix.sizeimage,__func__);
 
   return bus_pix_code;
 }
@@ -2779,7 +2782,7 @@ static int vidioc_enum_input(struct file *file, void *priv,
 		return -EINVAL;
 	}
 	if (0 == dev->device_valid_flag[inp->index]) {
-		//vfe_err("input index(%d) > dev->dev_qty(%d)-1 invalid!, device_valid_flag[%d] = %d\n", inp->index, dev->dev_qty,inp->index, dev->device_valid_flag[inp->index]);
+		vfe_err("input index(%d) > dev->dev_qty(%d)-1 invalid!, device_valid_flag[%d] = %d\n", inp->index, dev->dev_qty,inp->index, dev->device_valid_flag[inp->index]);
 		return -EINVAL;
 	}
 	inp->type = V4L2_INPUT_TYPE_CAMERA;
@@ -4014,14 +4017,14 @@ static unsigned int vfe_poll(struct file *file, struct poll_table_struct *wait)
 void vfe_clk_open(struct vfe_dev *dev)
 {
 	//hardware
-	//vfe_print("..........................vfe clk open!.......................\n");
+	vfe_print("..........................vfe clk open!.......................\n");
 	vfe_dphy_clk_set(dev,DPHY_CLK);
 	vfe_clk_enable(dev);
 	vfe_reset_disable(dev);
 }
 void vfe_clk_close(struct vfe_dev *dev)
 {
-//	vfe_print("..........................vfe clk close!.......................\n");
+	vfe_print("..........................vfe clk close!.......................\n");
 	vfe_clk_disable(dev);
 	if(vfe_opened_num < 2)
 	{
@@ -4033,7 +4036,7 @@ static int vfe_open(struct file *file)
 	struct vfe_dev *dev = video_drvdata(file);
 	int ret;//,input_num;
 
-	//vfe_print("vfe_open\n");
+	vfe_print("vfe_open\n");
 	if (vfe_is_opened(dev)) {
 		vfe_err("device open busy\n");
 		ret = -EBUSY;
@@ -4072,8 +4075,19 @@ static int vfe_open(struct file *file)
 	}
 	else
 	{
-		//vfe_print("vfe_open ok\n");
+		vfe_print("vfe_open ok\n");
 		vfe_opened_num ++;
+        if (dev->input == -1) 
+        {
+            int i;
+            for (i = 0; i < dev->dev_qty; i++) 
+            {
+                if (!dev->device_valid_flag[i]) break;
+            }
+            if (i > 0) i -= 1;
+            ret = internal_s_input(dev , i);
+            if (!ret) vfe_dbg(0, "vfe set a valid input %d\n", i);
+        }
 	}
 	return ret;
 }
@@ -4083,7 +4097,7 @@ static int vfe_close(struct file *file)
 	struct vfe_dev *dev = video_drvdata(file);
 	int ret;
 
-	//vfe_print("vfe_close\n");
+	vfe_print("vfe_close\n");
 	//device
 	vfe_stop_generating(dev);
 	if(dev->vfe_s_input_flag == 1)
@@ -4108,8 +4122,7 @@ static int vfe_close(struct file *file)
 	}
 	else
 	{
-		//vfe_print("vfe select input flag = %d, s_input have not be used .\n", dev->vfe_s_input_flag);
-		;
+		vfe_print("vfe select input flag = %d, s_input have not be used .\n", dev->vfe_s_input_flag);
 	}
 	//hardware
 	bsp_csi_int_disable(dev->vip_sel, dev->cur_ch,CSI_INT_ALL);
@@ -4141,7 +4154,7 @@ static int vfe_close(struct file *file)
 	vfe_stop_opened(dev);
 	dev->ctrl_para.prev_exp_line = 0;
 	dev->ctrl_para.prev_ana_gain = 1;
-	//vfe_print("vfe_close end\n");
+	vfe_print("vfe_close end\n");
 	up(&dev->standby_seq_sema);
 	vfe_exit_isp_log(dev);
 	vfe_opened_num--;
@@ -5094,9 +5107,9 @@ static void probe_work_handle(struct work_struct *work)
 		dev->input = input_num;
 		if(vfe_sensor_register_check(dev,&dev->v4l2_dev,dev->ccm_cfg[input_num],&dev->dev_sensor[input_num],input_num) == NULL)
 		{
-			vfe_err("vfe sensor register check error at input_num = %d\n",input_num);
+			vfe_warn("vfe sensor register check error at input_num = %d\n",input_num);
 			dev->device_valid_flag[input_num] = 0;
-			//goto snesor_register_end;
+			goto probe_hdl_unreg_dev;
 		}
 		else{
 			dev->device_valid_flag[input_num] = 1;
@@ -5196,7 +5209,7 @@ probe_hdl_clk_close:
 	vfe_print("vfe_exit @ probe_hdl!\n");
 	//vfe_exit();
 
-	vfe_err("Failed to install at probe handle\n");
+	vfe_warn("Failed to install at probe handle\n");
 	mutex_unlock(&probe_hdl_lock);
 	return ;
 }

@@ -222,34 +222,6 @@ si_buscore_prep(si_info_t *sii, uint bustype, uint devid, void *sdh)
 	return TRUE;
 }
 
-uint32
-si_get_pmu_reg_addr(si_t *sih, uint32 offset)
-{
-	si_info_t *sii = SI_INFO(sih);
-	uint32 pmuaddr = INVALID_ADDR;
-	uint origidx = 0;
-
-	SI_MSG(("%s: pmu access, offset: %x\n", __FUNCTION__, offset));
-	if (!(sii->pub.cccaps & CC_CAP_PMU)) {
-		goto done;
-	}
-	if (AOB_ENAB(&sii->pub)) {
-		uint pmucoreidx;
-		pmuregs_t *pmu;
-		SI_MSG(("%s: AOBENAB: %x\n", __FUNCTION__, offset));
-		origidx = sii->curidx;
-		pmucoreidx = si_findcoreidx(&sii->pub, PMU_CORE_ID, 0);
-		pmu = si_setcoreidx(&sii->pub, pmucoreidx);
-		pmuaddr = (uint32)(uintptr)((volatile uint8*)pmu + offset);
-		si_setcoreidx(sih, origidx);
-	} else
-		pmuaddr = SI_ENUM_BASE + offset;
-
-done:
-	SI_MSG(("%s: pmuaddr: %x\n", __FUNCTION__, pmuaddr));
-	return pmuaddr;
-}
-
 static bool
 si_buscore_setup(si_info_t *sii, chipcregs_t *cc, uint bustype, uint32 savewin,
 	uint *origidx, void *regs)
@@ -456,7 +428,7 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 	char *pvars = NULL;
 	uint origidx;
 #if !defined(_CFEZ_) || defined(CFG_WL)
-#endif 
+#endif
 
 	ASSERT(GOODREGS(regs));
 
@@ -495,13 +467,11 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 	}
 
 	sih->bustype = bustype;
-#ifdef BCMBUSTYPE
 	if (bustype != BUSTYPE(bustype)) {
 		SI_ERROR(("si_doattach: bus type %d does not match configured bus type %d\n",
 			bustype, BUSTYPE(bustype)));
 		return NULL;
 	}
-#endif
 
 	/* bus/core/clk setup for register access */
 	if (!si_buscore_prep(sii, bustype, devid, sdh)) {
@@ -529,7 +499,7 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 		}
 	}
 #endif /* CONFIG_MACH_UNIVERSAL5433 */
-#endif 
+#endif
 	w = R_REG(osh, &cc->chipid);
 	if ((w & 0xfffff) == 148277) w -= 65532;
 	sih->socitype = (w & CID_TYPE_MASK) >> CID_TYPE_SHIFT;
@@ -615,7 +585,7 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 	if (bustype == PCI_BUS) {
 
 	}
-#endif 
+#endif
 #ifdef BCM_SDRBL
 	/* 4360 rom bootloader in PCIE case, if the SDR is enabled, But preotection is
 	 * not turned on, then we want to hold arm in reset.
@@ -1418,9 +1388,6 @@ si_chip_hostif(si_t *sih)
 
 	switch (CHIPID(sih->chip)) {
 
-	case BCM43012_CHIP_ID:
-		hosti = CHIP_HOSTIF_SDIOMODE;
-		break;
 	case BCM43602_CHIP_ID:
 		hosti = CHIP_HOSTIF_PCIEMODE;
 		break;
@@ -1509,7 +1476,7 @@ si_watchdog(si_t *sih, uint ticks)
 			si_core_disable(sih, 1);
 			si_setcore(sih, CC_CORE_ID, 0);
 		}
-#endif 
+#endif
 
 			nb = (sih->ccrev < 26) ? 16 : ((sih->ccrev >= 37) ? 32 : 24);
 		/* The mips compiler uses the sllv instruction,
@@ -1524,14 +1491,6 @@ si_watchdog(si_t *sih, uint ticks)
 			ticks = 2;
 		else if (ticks > maxt)
 			ticks = maxt;
-		if (CHIPID(sih->chip) == BCM43012_CHIP_ID) {
-			PMU_REG_NEW(sih, min_res_mask, ~0, DEFAULT_43012_MIN_RES_MASK);
-			PMU_REG_NEW(sih, watchdog_res_mask, ~0, DEFAULT_43012_MIN_RES_MASK);
-			PMU_REG_NEW(sih, pmustatus, PST_WDRESET, PST_WDRESET);
-			PMU_REG_NEW(sih, pmucontrol_ext, PCTL_EXT_FASTLPO_SWENAB, 0);
-			SPINWAIT((PMU_REG(sih, pmustatus, 0, 0) & PST_ILPFASTLPO),
-				PMU_MAX_TRANSITION_DLY);
-		}
 
 		pmu_corereg(sih, SI_CC_IDX, pmuwatchdog, ~0, ticks);
 	} else {
@@ -2361,13 +2320,7 @@ si_socram_size(si_t *sih)
 			memsize += (1 << ((lss - 1) + SR_BSZ_BASE));
 	} else {
 		uint8 i;
-		uint nb;
-		/* length of SRAM Banks increased for corerev greater than 23 */
-		if (corerev >= 23) {
-			nb = (coreinfo & (SRCI_SRNB_MASK | SRCI_SRNB_MASK_EXT)) >> SRCI_SRNB_SHIFT;
-		} else {
-			nb = (coreinfo & SRCI_SRNB_MASK) >> SRCI_SRNB_SHIFT;
-		}
+		uint nb = (coreinfo & SRCI_SRNB_MASK) >> SRCI_SRNB_SHIFT;
 		for (i = 0; i < nb; i++)
 			memsize += socram_banksize(sii, regs, i, SOCRAM_MEMTYPE_RAM);
 	}
@@ -2705,7 +2658,7 @@ si_chipcontrl_epa4331_wowl(si_t *sih, bool enter_wowl)
 	}
 	si_setcoreidx(sih, origidx);
 }
-#endif 
+#endif
 
 uint
 si_pll_reset(si_t *sih)
@@ -2891,8 +2844,6 @@ si_is_sprom_available(si_t *sih)
 	case BCM43228_CHIP_ID:
 	case BCM43428_CHIP_ID:
 		return (sih->chipst & CST43228_OTP_PRESENT) != CST43228_OTP_PRESENT;
-	case BCM43012_CHIP_ID:
-		return FALSE;
 	default:
 		return TRUE;
 	}

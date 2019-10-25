@@ -138,12 +138,12 @@ static struct snd_soc_codec_driver soc_codec_dev_snddaudio = {
 	.remove =   snddaudio_soc_remove,
 };
 
-static int snddaudio_codec_probe(struct platform_device *pdev)
+static int __init snddaudio_codec_probe(struct platform_device *pdev)
 {
 	return snd_soc_register_codec(&pdev->dev, &soc_codec_dev_snddaudio, &snddaudio_dai, 1);	
 }
 
-static int snddaudio_codec_remove(struct platform_device *pdev)
+static int __exit snddaudio_codec_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
 	return 0;
@@ -164,7 +164,7 @@ static struct platform_driver snddaudio_codec_driver = {
 	.remove = __exit_p(snddaudio_codec_remove),
 };
 
-static int snddaudio_codec_init(void)
+static int __init snddaudio_codec_init(void)
 {	
 	int err = 0;
 	script_item_u val;
@@ -192,7 +192,7 @@ static int snddaudio_codec_init(void)
 }
 module_init(snddaudio_codec_init);
 
-static void snddaudio_codec_exit(void)
+static void __exit snddaudio_codec_exit(void)
 {
 	if (daudio_used) {
 		daudio_used = 0;

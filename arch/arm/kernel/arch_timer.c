@@ -139,7 +139,7 @@ extern void smp_timer_broadcast(const struct cpumask *mask);
 #define smp_timer_broadcast	NULL
 #endif
 
-static int arch_timer_setup(struct clock_event_device *clk)
+static int __cpuinit arch_timer_setup(struct clock_event_device *clk)
 {
 	/* Be safe... */
 	arch_timer_disable();
