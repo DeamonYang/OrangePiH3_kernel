@@ -744,8 +744,6 @@ void xradio_bss_info_changed(struct ieee80211_hw *dev,
 				   && priv->htcap) {
 				hw_priv->vif0_throttle = XRWL_HOST_VIF0_11N_THROTTLE;
 				hw_priv->vif1_throttle = XRWL_HOST_VIF1_11N_THROTTLE;
-				ap_printk(XRADIO_DBG_WARN, "[STA] ASSOC HTCAP 11N %d\n",
-					  hw_priv->vif0_throttle);
 			} else {
 				hw_priv->vif0_throttle = XRWL_HOST_VIF0_11BG_THROTTLE;
 				hw_priv->vif1_throttle = XRWL_HOST_VIF1_11BG_THROTTLE;

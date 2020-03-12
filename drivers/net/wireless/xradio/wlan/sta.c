@@ -2473,9 +2473,6 @@ int xradio_vif_setup(struct xradio_vif *priv)
 	priv->powersave_mode.apPsmChangePeriod = 200;	/*100ms */
 	priv->powersave_mode.minAutoPsPollPeriod = 0;	/*disable*/
 
-	sta_printk(XRADIO_DBG_ALWY, "!!!%s: id=%d, type=%d, p2p=%d\n",
-			__func__, priv->if_id, priv->vif->type, priv->vif->p2p);
-
 	atomic_set(&priv->enabled, 1);
 
 #ifdef P2P_MULTIVIF

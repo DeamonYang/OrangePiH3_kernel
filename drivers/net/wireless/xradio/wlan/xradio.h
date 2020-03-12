@@ -113,7 +113,7 @@
 
 #define XRADIO_PLAT_DEVICE   "xradio_device"
 #define XRADIO_WORKQUEUE   "xradio_wq"
-#define WIFI_CONF_PATH    "/data/xr_wifi.conf"
+#define WIFI_CONF_PATH    "/lib/firmware/xr819/xr_wifi.conf"
 
 extern char *drv_version;
 extern char *drv_buildtime;
